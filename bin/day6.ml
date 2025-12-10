@@ -1,6 +1,6 @@
 let solve1 data =
   let mat = ref (Array.of_list (List.map (fun line ->
-      Array.of_list (List.of_seq (String.to_seq line))) data)) in
+      Array.of_seq (String.to_seq line)) data)) in
   let width = Array.length (!mat).(0) in
   let height = Array.length !mat in
   let start_y = match Array.find_index (fun x -> Array.exists ((=) '^') x) !mat with
@@ -40,7 +40,7 @@ let rec windows4 = function
 
 let solve2 data =
   let mat = ref (Array.of_list (List.map (fun line ->
-      Array.of_list (List.of_seq (String.to_seq line))) data)) in
+      Array.of_seq (String.to_seq line)) data)) in
   let width = Array.length (!mat).(0) in
   let height = Array.length !mat in
   let start_y = match Array.find_index (fun x -> Array.exists ((=) '^') x) !mat with

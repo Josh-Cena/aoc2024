@@ -6,7 +6,7 @@ let rec combinations2 = function
 
 let solve1 data =
   let mat = Array.of_list (List.map (fun line ->
-      Array.of_list (List.of_seq (String.to_seq line))) data) in
+      Array.of_seq (String.to_seq line)) data) in
   let width = Array.length (mat.(0)) in
   let height = Array.length mat in
   let antenna_groups = ref [] in
@@ -39,7 +39,7 @@ let solve1 data =
 
 let solve2 data =
   let mat = Array.of_list (List.map (fun line ->
-      Array.of_list (List.of_seq (String.to_seq line))) data) in
+      Array.of_seq (String.to_seq line)) data) in
   let width = Array.length (mat.(0)) in
   let height = Array.length mat in
   let antenna_groups = ref [] in
