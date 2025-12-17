@@ -56,4 +56,6 @@ let () = match (day, prob) with
   | ("20", "2") -> Day20.solve2 contents
   | ("22", "1") -> Day22.solve1 contents
   | ("22", "2") -> Day22.solve2 contents
+  | ("23", "1") -> Day23.solve1 contents
+  | ("23", "2") -> Day23.solve2 contents
   | _ -> Printf.printf "Day %s Problem %s not implemented\n" day prob
