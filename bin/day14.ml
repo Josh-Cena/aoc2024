@@ -54,6 +54,10 @@ let solve2 data =
       let key = (px, py) in
       Hashtbl.replace pos_count key (1 + (try Hashtbl.find pos_count key with Not_found -> 0))
     ) new_pos;
+    (* Fact revealed to me in a dream (Because, obviously, the question is
+      reverse-engineered from this starting point with no overlap)
+      Even if this isn't true there are many other ways, such as searching for
+      straight edges *)
     if Hashtbl.fold (fun _ count acc -> acc && count = 1) pos_count true then
       (Printf.printf "t=%d\n" (step + 1);
       print_board w h new_pos);

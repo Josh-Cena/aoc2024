@@ -44,6 +44,8 @@ let () = match (day, prob) with
   | ("13", "2") -> Day13.solve2 contents
   | ("14", "1") -> Day14.solve1 contents
   | ("14", "2") -> Day14.solve2 contents
+  | ("15", "1") -> Day15.solve1 contents
+  | ("15", "2") -> Day15.solve2 contents
   | ("16", "1") -> Day16.solve1 contents
   | ("16", "2") -> Day16.solve2 contents
   | ("17", "1") -> Day17.solve1 contents
