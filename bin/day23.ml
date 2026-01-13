@@ -12,16 +12,23 @@ let solve1 data =
   in
   List.iter add_line data;
   let triangles = Hashtbl.create (List.length data) in
-  Hashtbl.iter (fun (u, v) _ ->
-    Hashtbl.iter (fun k _ ->
-      if String.starts_with ~prefix:"t" k && Hashtbl.mem edges (u, k) && Hashtbl.mem edges (v, k) then
-        let key = match List.sort compare [u; v; k] with
-          | [a; b; c] -> (a, b, c)
-          | _ -> failwith "Unexpected case"
-        in
-        Hashtbl.replace triangles key ()
-    ) nodes
-  ) edges;
+  Hashtbl.iter
+    (fun (u, v) _ ->
+      Hashtbl.iter
+        (fun k _ ->
+          if
+            String.starts_with ~prefix:"t" k
+            && Hashtbl.mem edges (u, k)
+            && Hashtbl.mem edges (v, k)
+          then
+            let key =
+              match List.sort compare [ u; v; k ] with
+              | [ a; b; c ] -> (a, b, c)
+              | _ -> failwith "Unexpected case"
+            in
+            Hashtbl.replace triangles key ())
+        nodes)
+    edges;
   Printf.printf "%d\n" (Hashtbl.length triangles)
 
 let solve2 _ = Printf.printf "Life's too short; please see day23.py\n"
