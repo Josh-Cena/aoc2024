@@ -15,6 +15,8 @@ let pos_mod x y =
 let move_robot w h ((px, py), (vx, vy)) =
   ((pos_mod (px + vx) w, pos_mod (py + vy) h), (vx, vy))
 
+let rec apply_n n f res = if n <= 0 then res else apply_n (n - 1) f (f res)
+
 let quadrant w h x y =
   let half_w = (w - 1) / 2 in
   let half_h = (h - 1) / 2 in
@@ -31,12 +33,10 @@ let solve1 data =
     (int_of_string (List.nth parts 0), int_of_string (List.nth parts 1))
   in
   let robots = List.map parse_line (List.tl data) in
-  let new_pos =
-    List.fold_left
-      (fun acc _ -> List.map (move_robot w h) acc)
-      robots
-      (List.init 100 (fun _ -> 0))
+  let rec loop n pos =
+    if n = 100 then pos else loop (n + 1) (List.map (move_robot w h) pos)
   in
+  let new_pos = loop 0 robots in
   let quadrants = List.map (fun ((px, py), _) -> quadrant w h px py) new_pos in
   let counts = Array.make 4 0 in
   List.iter (fun q -> if q >= 0 then counts.(q) <- counts.(q) + 1) quadrants;
@@ -56,27 +56,24 @@ let solve2 data =
     (int_of_string (List.nth parts 0), int_of_string (List.nth parts 1))
   in
   let robots = List.map parse_line (List.tl data) in
-  let _ =
-    List.fold_left
-      (fun acc step ->
-        let new_pos = List.map (move_robot w h) acc in
-        let pos_count = Hashtbl.create 100 in
-        List.iter
-          (fun ((px, py), _) ->
-            let key = (px, py) in
-            Hashtbl.replace pos_count key
-              (1 + try Hashtbl.find pos_count key with Not_found -> 0))
-          new_pos;
-        (* Fact revealed to me in a dream (Because, obviously, the question is
-      reverse-engineered from this starting point with no overlap)
-      Even if this isn't true there are many other ways, such as searching for
-      straight edges *)
-        if Hashtbl.fold (fun _ count acc -> acc && count = 1) pos_count true
-        then (
-          Printf.printf "t=%d\n" (step + 1);
-          print_board w h new_pos);
-        new_pos)
-      robots
-      (List.init 10000 (fun i -> i))
+  let rec loop n board =
+    if n = 10000 then ()
+    else
+      let new_pos = List.map (move_robot w h) board in
+      let pos_count = Hashtbl.create 100 in
+      List.iter
+        (fun ((px, py), _) ->
+          let key = (px, py) in
+          Hashtbl.replace pos_count key
+            (1 + Option.value (Hashtbl.find_opt pos_count key) ~default:0))
+        new_pos;
+      (* Fact revealed to me in a dream (Because, obviously, the question is
+        reverse-engineered from this starting point with no overlap)
+        Even if this isn't true there are many other ways, such as searching for
+        straight edges *)
+      if Hashtbl.fold (fun _ count acc -> acc && count = 1) pos_count true then (
+        Printf.printf "t=%d\n" (n + 1);
+        print_board w h new_pos);
+      loop (n + 1) new_pos
   in
-  ()
+  loop 0 robots

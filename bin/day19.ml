@@ -1,21 +1,19 @@
 let rec ways_to_construct pattern towels memo =
   match Hashtbl.find_opt memo pattern with
-  | Some x -> x
+  | Some count -> count
   | None ->
-      let ways =
-        List.map
-          (fun prefix ->
-            if String.starts_with ~prefix pattern then
-              ways_to_construct
-                (String.sub pattern (String.length prefix)
-                   (String.length pattern - String.length prefix))
-                towels memo
-            else 0)
-          towels
+      let count =
+        towels
+        |> List.filter (fun towel -> String.starts_with ~prefix:towel pattern)
+        |> List.map (fun towel ->
+            ways_to_construct
+              (String.sub pattern (String.length towel)
+                 (String.length pattern - String.length towel))
+              towels memo)
+        |> List.fold_left ( + ) 0
       in
-      let result = List.fold_left ( + ) 0 ways in
-      Hashtbl.add memo pattern result;
-      result
+      Hashtbl.add memo pattern count;
+      count
 
 let solve1 data =
   let towels = Str.split (Str.regexp ", ") (List.hd data) in

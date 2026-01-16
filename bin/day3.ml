@@ -21,22 +21,20 @@ let solve2 data =
     |> List.map (fun g ->
         (Re.Group.get g 0, Re.Group.get_opt g 1, Re.Group.get_opt g 2))
   in
-  let _, matches' =
+  let _, total =
     List.fold_left
-      (fun (cur_st, muls) (s, a, b) ->
+      (fun (cur_st, res) (s, a, b) ->
         match s with
-        | "do()" -> (true, muls)
-        | "don't()" -> (false, muls)
+        | "do()" -> (true, res)
+        | "don't()" -> (false, res)
         | _ -> begin
             match (a, b) with
             | Some a, Some b ->
                 if cur_st then
-                  (cur_st, (int_of_string a, int_of_string b) :: muls)
-                else (cur_st, muls)
-            | _ -> (cur_st, muls)
+                  (cur_st, (int_of_string a * int_of_string b) + res)
+                else (cur_st, res)
+            | _ -> (cur_st, res)
           end)
-      (true, []) matches
+      (true, 0) matches
   in
-  let products = List.map (fun (a, b) -> a * b) matches' in
-  let total = List.fold_left ( + ) 0 products in
   Printf.printf "%d\n" total

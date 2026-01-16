@@ -2,12 +2,12 @@ open Q
 
 type mat22 = { a : Q.t; b : Q.t; c : Q.t; d : Q.t }
 
-let inv =
-  let det = fun { a; b; c; d } -> (a * d) - (b * c) in
-  fun m ->
-    let d = det m in
-    if d = Q.zero then None
-    else Some { a = m.d / d; b = -m.b / d; c = -m.c / d; d = m.a / d }
+let det { a; b; c; d } = (a * d) - (b * c)
+
+let inv m =
+  let d = det m in
+  if d = Q.zero then None
+  else Some { a = m.d / d; b = -m.b / d; c = -m.c / d; d = m.a / d }
 
 let btn_re = Re.Perl.compile_pat {|Button [AB]: X\+(\d+), Y\+(\d+)|}
 let prize_re = Re.Perl.compile_pat {|Prize: X=(\d+), Y=(\d+)|}
@@ -61,8 +61,8 @@ let solve_lp mat (prize_x, prize_y) =
       then Some (x, y)
       else None
 
-let solve1 data =
-  let blocks = parse_lines data (of_int 0) in
+let solve prize_shift data =
+  let blocks = parse_lines data (of_int prize_shift) in
   let solutions =
     List.filter_map (fun (mat, prize) -> solve_lp mat prize) blocks
   in
@@ -72,13 +72,5 @@ let solve1 data =
   in
   Printf.printf "%s\n" (to_string total)
 
-let solve2 data =
-  let blocks = parse_lines data (of_int 10000000000000) in
-  let solutions =
-    List.filter_map (fun (mat, prize) -> solve_lp mat prize) blocks
-  in
-  let total =
-    List.map (fun (x, y) -> (of_int 3 * x) + y) solutions
-    |> List.fold_left ( + ) (of_int 0)
-  in
-  Printf.printf "%s\n" (to_string total)
+let solve1 = solve 0
+let solve2 = solve 10000000000000

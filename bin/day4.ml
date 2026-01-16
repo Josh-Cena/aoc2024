@@ -5,16 +5,16 @@ let solve1 data =
   in
   let width = Array.length mat.(0) in
   let height = Array.length mat in
-  let is_xmas mat x y dirx diry =
+  let is_xmas mat x y dx dy =
     (not
-       ((dirx == -1 && x <= 2)
-       || (dirx == 1 && x >= width - 3)
-       || (diry == -1 && y <= 2)
-       || (diry == 1 && y >= height - 3)))
+       ((dx == -1 && x <= 2)
+       || (dx == 1 && x >= width - 3)
+       || (dy == -1 && y <= 2)
+       || (dy == 1 && y >= height - 3)))
     && mat.(y).(x) = 'X'
-    && mat.(y + diry).(x + dirx) = 'M'
-    && mat.(y + (2 * diry)).(x + (2 * dirx)) = 'A'
-    && mat.(y + (3 * diry)).(x + (3 * dirx)) = 'S'
+    && mat.(y + dy).(x + dx) = 'M'
+    && mat.(y + (2 * dy)).(x + (2 * dx)) = 'A'
+    && mat.(y + (3 * dy)).(x + (3 * dx)) = 'S'
   in
   let count = ref 0 in
   for y = 0 to height - 1 do
@@ -34,19 +34,15 @@ let solve2 data =
   let width = Array.length mat.(0) in
   let height = Array.length mat in
   let is_xmas mat x y =
-    x >= 1
-    && x <= width - 2
-    && y >= 1
-    && y <= height - 2
-    && mat.(y).(x) = 'A'
+    mat.(y).(x) = 'A'
     && ((mat.(y - 1).(x - 1) = 'M' && mat.(y + 1).(x + 1) = 'S')
        || (mat.(y - 1).(x - 1) = 'S' && mat.(y + 1).(x + 1) = 'M'))
     && ((mat.(y - 1).(x + 1) = 'M' && mat.(y + 1).(x - 1) = 'S')
        || (mat.(y - 1).(x + 1) = 'S' && mat.(y + 1).(x - 1) = 'M'))
   in
   let count = ref 0 in
-  for y = 0 to height - 1 do
-    for x = 0 to width - 1 do
+  for y = 1 to height - 2 do
+    for x = 1 to width - 2 do
       if is_xmas mat x y then incr count
     done
   done;

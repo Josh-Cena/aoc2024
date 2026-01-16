@@ -1,4 +1,4 @@
-type state = { x : int; y : int; dirx : int; diry : int }
+type state = { x : int; y : int; dx : int; dy : int }
 
 let edges w h board st =
   List.filter
@@ -6,9 +6,9 @@ let edges w h board st =
       st'.x >= 0 && st'.x < w && st'.y >= 0 && st'.y < h
       && board.(st'.y).(st'.x) <> '#')
     [
-      ({ st with x = st.x + st.dirx; y = st.y + st.diry }, 1);
-      ({ st with dirx = -st.diry; diry = st.dirx }, 1000);
-      ({ st with dirx = st.diry; diry = -st.dirx }, 1000);
+      ({ st with x = st.x + st.dx; y = st.y + st.dy }, 1);
+      ({ st with dx = -st.dy; dy = st.dx }, 1000);
+      ({ st with dx = st.dy; dy = -st.dx }, 1000);
     ]
 
 let edges_rev w h board st =
@@ -17,9 +17,9 @@ let edges_rev w h board st =
       st'.x >= 0 && st'.x < w && st'.y >= 0 && st'.y < h
       && board.(st'.y).(st'.x) <> '#')
     [
-      ({ st with x = st.x - st.dirx; y = st.y - st.diry }, 1);
-      ({ st with dirx = -st.diry; diry = st.dirx }, 1000);
-      ({ st with dirx = st.diry; diry = -st.dirx }, 1000);
+      ({ st with x = st.x - st.dx; y = st.y - st.dy }, 1);
+      ({ st with dx = -st.dy; dy = st.dx }, 1000);
+      ({ st with dx = st.dy; dy = -st.dx }, 1000);
     ]
 
 module StateOrder = struct
@@ -35,64 +35,55 @@ let dijkstra mat rev s =
   let height = Array.length mat in
   let pq = MinQueue.create () in
   let dist = Hashtbl.create (width * height * 4) in
-  let prev = Hashtbl.create (width * height * 4) in
   MinQueue.add pq (s, 0);
   Hashtbl.add dist s 0;
-  while not (MinQueue.is_empty pq) do
-    let u, _ =
-      match MinQueue.pop_min pq with
-      | Some v -> v
-      | None -> failwith "unreachable"
-    in
-    match Hashtbl.find_opt dist u with
-    | None -> ()
-    | Some u_dist ->
-        let neighbors = (if rev then edges_rev else edges) width height mat u in
-        List.iter
-          (fun (v, weight) ->
-            let is_better =
-              begin match Hashtbl.find_opt dist v with
-              | None -> true
-              | Some v_dist -> u_dist + weight < v_dist
-              end
-            in
-            let is_equiv =
-              begin match Hashtbl.find_opt dist v with
-              | None -> false
-              | Some v_dist -> u_dist + weight = v_dist
-              end
-            in
-            if is_better then begin
-              Hashtbl.replace dist v (u_dist + weight);
-              Hashtbl.replace prev v [ u ];
-              MinQueue.add pq (v, u_dist + weight)
+  let rec loop () =
+    if MinQueue.is_empty pq then ()
+    else
+      let u, _ = Option.get (MinQueue.pop_min pq) in
+      let u_dist = Hashtbl.find dist u in
+      let neighbors = (if rev then edges_rev else edges) width height mat u in
+      List.iter
+        (fun (v, weight) ->
+          let is_better =
+            begin match Hashtbl.find_opt dist v with
+            | None -> true
+            | Some v_dist -> u_dist + weight < v_dist
             end
-            else if is_equiv then
-              Hashtbl.replace prev v (u :: Hashtbl.find prev v))
-          neighbors
-  done;
-  (dist, prev)
+          in
+          if is_better then begin
+            Hashtbl.replace dist v (u_dist + weight);
+            MinQueue.add pq (v, u_dist + weight)
+          end)
+        neighbors;
+      loop ()
+  in
+  loop ();
+  dist
 
 let solve1 data =
   let mat =
     Array.of_list
       (List.map (fun line -> Array.of_seq (String.to_seq line)) data)
   in
-  let s = ref { x = 0; y = 0; dirx = 1; diry = 0 } in
-  let e = ref { x = 0; y = 0; dirx = 0; diry = 0 } in
-  let width = Array.length mat.(0) in
-  let height = Array.length mat in
-  for x = 0 to width - 1 do
-    for y = 0 to height - 1 do
-      if mat.(y).(x) = 'S' then s := { x; y; dirx = 1; diry = 0 }
-      else if mat.(y).(x) = 'E' then e := { x; y; dirx = 0; diry = 0 }
-    done
-  done;
-  let dist, _ = dijkstra mat false !s in
-  let e1_dist = Hashtbl.find dist { !e with dirx = 1; diry = 0 } in
-  let e2_dist = Hashtbl.find dist { !e with dirx = 0; diry = 1 } in
-  let e3_dist = Hashtbl.find dist { !e with dirx = -1; diry = 0 } in
-  let e4_dist = Hashtbl.find dist { !e with dirx = 0; diry = -1 } in
+  let sy, sx =
+    mat
+    |> Array.find_mapi (fun i ->
+        Array.find_mapi (fun j c -> if c = 'S' then Some (i, j) else None))
+    |> Option.get
+  in
+  let ey, ex =
+    mat
+    |> Array.find_mapi (fun i ->
+        Array.find_mapi (fun j c -> if c = 'E' then Some (i, j) else None))
+    |> Option.get
+  in
+  let s = { x = sx; y = sy; dx = 1; dy = 0 } in
+  let dist = dijkstra mat false s in
+  let e1_dist = Hashtbl.find dist { x = ex; y = ey; dx = 1; dy = 0 } in
+  let e2_dist = Hashtbl.find dist { x = ex; y = ey; dx = 0; dy = 1 } in
+  let e3_dist = Hashtbl.find dist { x = ex; y = ey; dx = -1; dy = 0 } in
+  let e4_dist = Hashtbl.find dist { x = ex; y = ey; dx = 0; dy = -1 } in
   let res = List.fold_left min max_int [ e1_dist; e2_dist; e3_dist; e4_dist ] in
   Printf.printf "%d\n" res
 
@@ -101,21 +92,24 @@ let solve2 data =
     Array.of_list
       (List.map (fun line -> Array.of_seq (String.to_seq line)) data)
   in
-  let s = ref { x = 0; y = 0; dirx = 1; diry = 0 } in
-  let e = ref { x = 0; y = 0; dirx = 0; diry = 0 } in
-  let width = Array.length mat.(0) in
-  let height = Array.length mat in
-  for x = 0 to width - 1 do
-    for y = 0 to height - 1 do
-      if mat.(y).(x) = 'S' then s := { x; y; dirx = 1; diry = 0 }
-      else if mat.(y).(x) = 'E' then e := { x; y; dirx = 0; diry = 0 }
-    done
-  done;
-  let dist_s, _ = dijkstra mat false !s in
-  let e1 = { !e with dirx = 1; diry = 0 } in
-  let e2 = { !e with dirx = 0; diry = 1 } in
-  let e3 = { !e with dirx = -1; diry = 0 } in
-  let e4 = { !e with dirx = 0; diry = -1 } in
+  let sy, sx =
+    mat
+    |> Array.find_mapi (fun i ->
+        Array.find_mapi (fun j c -> if c = 'S' then Some (i, j) else None))
+    |> Option.get
+  in
+  let ey, ex =
+    mat
+    |> Array.find_mapi (fun i ->
+        Array.find_mapi (fun j c -> if c = 'E' then Some (i, j) else None))
+    |> Option.get
+  in
+  let s = { x = sx; y = sy; dx = 1; dy = 0 } in
+  let dist_s = dijkstra mat false s in
+  let e1 = { x = ex; y = ey; dx = 1; dy = 0 } in
+  let e2 = { x = ex; y = ey; dx = 0; dy = 1 } in
+  let e3 = { x = ex; y = ey; dx = -1; dy = 0 } in
+  let e4 = { x = ex; y = ey; dx = 0; dy = -1 } in
   let e1_dist = Hashtbl.find dist_s e1 in
   let e2_dist = Hashtbl.find dist_s e2 in
   let e3_dist = Hashtbl.find dist_s e3 in
@@ -128,7 +122,6 @@ let solve2 data =
     |> List.filter (fun (_, d) -> d = min_dist)
     |> List.map fst
     |> List.map (dijkstra mat true)
-    |> List.map fst
   in
   let optimal_states =
     Hashtbl.fold

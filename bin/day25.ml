@@ -1,18 +1,15 @@
-let count_col (rows : string list) =
-  match rows with
-  | [] -> []
-  | r0 :: _ ->
-      let a = Array.of_list rows in
-      let n = Array.length a in
-      let m = String.length r0 in
-      let counts = Array.make m 0 in
-      for i = 0 to n - 1 do
-        let s = a.(i) in
-        for j = 0 to m - 1 do
-          if s.[j] = '#' then counts.(j) <- counts.(j) + 1
-        done
-      done;
-      Array.to_list counts
+let count_col rows =
+  let a = Array.of_list rows in
+  let n = Array.length a in
+  let m = String.length (List.hd rows) in
+  let counts = Array.make m 0 in
+  for i = 0 to n - 1 do
+    let s = a.(i) in
+    for j = 0 to m - 1 do
+      if s.[j] = '#' then counts.(j) <- counts.(j) + 1
+    done
+  done;
+  Array.to_list counts
 
 let solve1 data =
   let schematics = Str.split (Str.regexp "\n\n") (String.concat "\n" data) in

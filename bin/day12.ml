@@ -1,4 +1,4 @@
-let solve1 data =
+let mark_regions data =
   let mat =
     Array.of_list
       (List.map (fun line -> Array.of_seq (String.to_seq line)) data)
@@ -7,32 +7,39 @@ let solve1 data =
   let width = Array.length mat.(0) in
   let regions = Array.map (Array.map (fun _ -> -1)) mat in
   let region_id = ref 0 in
+  let flood_fill x y =
+    let queue = Queue.create () in
+    Queue.push (x, y) queue;
+    regions.(y).(x) <- !region_id;
+    while not (Queue.is_empty queue) do
+      let cx, cy = Queue.pop queue in
+      let neighbors =
+        [ (cx - 1, cy); (cx + 1, cy); (cx, cy - 1); (cx, cy + 1) ]
+      in
+      List.iter
+        (fun (nx, ny) ->
+          if nx >= 0 && nx < width && ny >= 0 && ny < height then
+            if regions.(ny).(nx) = -1 && mat.(ny).(nx) = mat.(cy).(cx) then begin
+              regions.(ny).(nx) <- !region_id;
+              Queue.push (nx, ny) queue
+            end)
+        neighbors
+    done
+  in
   for x = 0 to width - 1 do
     for y = 0 to height - 1 do
       if regions.(y).(x) = -1 then begin
-        let queue = Queue.create () in
-        Queue.push (x, y) queue;
-        regions.(y).(x) <- !region_id;
-        while not (Queue.is_empty queue) do
-          let cx, cy = Queue.pop queue in
-          let neighbors =
-            [ (cx - 1, cy); (cx + 1, cy); (cx, cy - 1); (cx, cy + 1) ]
-          in
-          List.iter
-            (fun (nx, ny) ->
-              if nx >= 0 && nx < width && ny >= 0 && ny < height then
-                if regions.(ny).(nx) = -1 && mat.(ny).(nx) = mat.(cy).(cx) then begin
-                  regions.(ny).(nx) <- !region_id;
-                  Queue.push (nx, ny) queue
-                end)
-            neighbors
-        done;
+        flood_fill x y;
         region_id := !region_id + 1
       end
     done
   done;
-  let areas = Array.make !region_id 0 in
-  let perimeters = Array.make !region_id 0 in
+  (regions, !region_id, width, height)
+
+let solve1 data =
+  let regions, region_count, width, height = mark_regions data in
+  let areas = Array.make region_count 0 in
+  let perimeters = Array.make region_count 0 in
   for y = 0 to height - 1 do
     for x = 0 to width - 1 do
       let rid = regions.(y).(x) in
@@ -47,95 +54,48 @@ let solve1 data =
         neighbors
     done
   done;
-  let types = List.init !region_id (fun i -> areas.(i) * perimeters.(i)) in
+  let types = List.init region_count (fun i -> areas.(i) * perimeters.(i)) in
   Printf.printf "%d\n" (List.fold_left ( + ) 0 types)
 
 let solve2 data =
-  let mat =
-    Array.of_list
-      (List.map (fun line -> Array.of_seq (String.to_seq line)) data)
-  in
-  let height = Array.length mat in
-  let width = Array.length mat.(0) in
-  let regions = Array.map (Array.map (fun _ -> -1)) mat in
-  let region_id = ref 0 in
-  for x = 0 to width - 1 do
-    for y = 0 to height - 1 do
-      if regions.(y).(x) = -1 then begin
-        let queue = Queue.create () in
-        Queue.push (x, y) queue;
-        regions.(y).(x) <- !region_id;
-        while not (Queue.is_empty queue) do
-          let cx, cy = Queue.pop queue in
-          let neighbors =
-            [ (cx - 1, cy); (cx + 1, cy); (cx, cy - 1); (cx, cy + 1) ]
-          in
-          List.iter
-            (fun (nx, ny) ->
-              if nx >= 0 && nx < width && ny >= 0 && ny < height then
-                if regions.(ny).(nx) = -1 && mat.(ny).(nx) = mat.(cy).(cx) then begin
-                  regions.(ny).(nx) <- !region_id;
-                  Queue.push (nx, ny) queue
-                end)
-            neighbors
-        done;
-        region_id := !region_id + 1
-      end
-    done
-  done;
-  let areas = Array.make !region_id 0 in
-  (* For each region: count transitions. Edge for color X starts when the current
-      cell is X and the previous cell is not X (or out of bounds), or the previous
-      cell is X but the cell above that is also X. It ends when the next cell
-      is no longer X, or the cell above that is also X. *)
-  let transitions = Array.make !region_id 0 in
+  let regions, region_count, width, height = mark_regions data in
+  let areas = Array.make region_count 0 in
   for y = 0 to height - 1 do
     for x = 0 to width - 1 do
       let rid = regions.(y).(x) in
       areas.(rid) <- areas.(rid) + 1
     done
   done;
+  (* For each region: count corners. A reflex corner must be different from its
+     diagonal neighbor but the same from both orthogonal neighbors next to that
+     diagonal neighbor. A convex corner must be different from two adjacent
+     orthogonal neighbors. E.g.:
+
+      n1 n2 n3
+      n4  c n5
+      n6 n7 n8
+        
+     c should either be different from n2 and n4 or different from c1 but
+     same as n2 and n4 *)
+  let corners = Array.make region_count 0 in
   for y = 0 to height - 1 do
     for x = 0 to width - 1 do
       let rid = regions.(y).(x) in
-      (*
-        n1 n2 n3
-        n4  c n5
-        n6 n7 n8
-      *)
       let c = regions.(y).(x) in
-      let n1, n2, n3, n4, n5, n6, n7, n8 =
-        ( (if x > 0 && y > 0 then regions.(y - 1).(x - 1) else -1),
-          (if y > 0 then regions.(y - 1).(x) else -1),
-          (if x < width - 1 && y > 0 then regions.(y - 1).(x + 1) else -1),
-          (if x > 0 then regions.(y).(x - 1) else -1),
-          (if x < width - 1 then regions.(y).(x + 1) else -1),
-          (if x > 0 && y < height - 1 then regions.(y + 1).(x - 1) else -1),
-          (if y < height - 1 then regions.(y + 1).(x) else -1),
-          if x < width - 1 && y < height - 1 then regions.(y + 1).(x + 1)
-          else -1 )
+      let get_neighbor dx dy =
+        if x + dx >= 0 && x + dx < width && y + dy >= 0 && y + dy < height then
+          regions.(y + dy).(x + dx)
+        else -1
       in
-      (* Top start/end *)
-      if c <> n2 && (c <> n4 || n4 == n1) then
-        transitions.(rid) <- transitions.(rid) + 1;
-      if c <> n2 && (c <> n5 || n5 == n3) then
-        transitions.(rid) <- transitions.(rid) + 1;
-      (* Bottom start/end *)
-      if c <> n7 && (c <> n4 || n4 == n6) then
-        transitions.(rid) <- transitions.(rid) + 1;
-      if c <> n7 && (c <> n5 || n5 == n8) then
-        transitions.(rid) <- transitions.(rid) + 1;
-      (* Left start/end *)
-      if c <> n4 && (c <> n2 || n2 == n1) then
-        transitions.(rid) <- transitions.(rid) + 1;
-      if c <> n4 && (c <> n7 || n7 == n6) then
-        transitions.(rid) <- transitions.(rid) + 1;
-      (* Right start/end *)
-      if c <> n5 && (c <> n2 || n2 == n3) then
-        transitions.(rid) <- transitions.(rid) + 1;
-      if c <> n5 && (c <> n7 || n7 == n8) then
-        transitions.(rid) <- transitions.(rid) + 1
+      List.iter
+        (fun (dx, dy) ->
+          let o1 = get_neighbor dx 0 in
+          let o2 = get_neighbor 0 dy in
+          let d = get_neighbor dx dy in
+          if (c <> o1 && c <> o2) || (c <> d && c = o1 && c = o2) then
+            corners.(rid) <- corners.(rid) + 1)
+        [ (-1, -1); (-1, 1); (1, -1); (1, 1) ]
     done
   done;
-  let types = List.init !region_id (fun i -> areas.(i) * transitions.(i) / 2) in
+  let types = List.init region_count (fun i -> areas.(i) * corners.(i)) in
   Printf.printf "%d\n" (List.fold_left ( + ) 0 types)

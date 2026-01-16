@@ -11,32 +11,33 @@ let solve1 data =
   let width = Array.length mat.(0) in
   let height = Array.length mat in
   let dp = Array.make_matrix height width [] in
+  let value_to_pos = Array.make 10 [] in
   for y = 0 to height - 1 do
     for x = 0 to width - 1 do
-      if mat.(y).(x) = 9 then dp.(y).(x) <- [ (x, y) ]
+      let v = mat.(y).(x) in
+      value_to_pos.(v) <- (x, y) :: value_to_pos.(v)
     done
   done;
+  List.iter (fun (x, y) -> dp.(y).(x) <- [ (x, y) ]) value_to_pos.(9);
 
   let dirs = [ (1, 0); (-1, 0); (0, 1); (0, -1) ] in
 
   for d = 8 downto 0 do
-    for y = 0 to height - 1 do
-      for x = 0 to width - 1 do
-        if mat.(y).(x) = d then
-          dp.(y).(x) <-
-            List.map
-              (fun (dx, dy) ->
-                let nx = x + dx in
-                let ny = y + dy in
-                if
-                  0 <= nx && nx < width && 0 <= ny && ny < height
-                  && mat.(ny).(nx) = d + 1
-                then dp.(ny).(nx)
-                else [])
-              dirs
-            |> List.fold_left ( @ ) [] |> List.sort_uniq compare
-      done
-    done
+    List.iter
+      (fun (x, y) ->
+        dp.(y).(x) <-
+          List.map
+            (fun (dx, dy) ->
+              let nx = x + dx in
+              let ny = y + dy in
+              if
+                0 <= nx && nx < width && 0 <= ny && ny < height
+                && mat.(ny).(nx) = d + 1
+              then dp.(ny).(nx)
+              else [])
+            dirs
+          |> List.fold_left ( @ ) [] |> List.sort_uniq compare)
+      value_to_pos.(d)
   done;
 
   let total = ref 0 in
@@ -60,32 +61,33 @@ let solve2 data =
   let width = Array.length mat.(0) in
   let height = Array.length mat in
   let dp = Array.make_matrix height width 0 in
+  let value_to_pos = Array.make 10 [] in
   for y = 0 to height - 1 do
     for x = 0 to width - 1 do
-      if mat.(y).(x) = 9 then dp.(y).(x) <- 1
+      let v = mat.(y).(x) in
+      value_to_pos.(v) <- (x, y) :: value_to_pos.(v)
     done
   done;
+  List.iter (fun (x, y) -> dp.(y).(x) <- 1) value_to_pos.(9);
 
   let dirs = [ (1, 0); (-1, 0); (0, 1); (0, -1) ] in
 
   for d = 8 downto 0 do
-    for y = 0 to height - 1 do
-      for x = 0 to width - 1 do
-        if mat.(y).(x) = d then
-          dp.(y).(x) <-
-            List.map
-              (fun (dx, dy) ->
-                let nx = x + dx in
-                let ny = y + dy in
-                if
-                  0 <= nx && nx < width && 0 <= ny && ny < height
-                  && mat.(ny).(nx) = d + 1
-                then dp.(ny).(nx)
-                else 0)
-              dirs
-            |> List.fold_left ( + ) 0
-      done
-    done
+    List.iter
+      (fun (x, y) ->
+        dp.(y).(x) <-
+          List.map
+            (fun (dx, dy) ->
+              let nx = x + dx in
+              let ny = y + dy in
+              if
+                0 <= nx && nx < width && 0 <= ny && ny < height
+                && mat.(ny).(nx) = d + 1
+              then dp.(ny).(nx)
+              else 0)
+            dirs
+          |> List.fold_left ( + ) 0)
+      value_to_pos.(d)
   done;
 
   let total = ref 0 in

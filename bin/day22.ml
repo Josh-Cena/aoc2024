@@ -4,24 +4,39 @@ let next_secret num =
   let num''' = (num'' lsl 11) lxor num'' land 0xFFFFFF in
   num'''
 
-let ( >> ) f g x = g (f x)
 let rec rep f n acc = if n = 0 then acc else rep f (n - 1) (f acc)
 
-let rec rep_history f n acc =
-  if n = 0 then [ acc ] else acc :: rep_history f (n - 1) (f acc)
-
-let running_diff lst =
-  let rec helper lst acc =
-    match lst with
-    | [] | [ _ ] -> acc
-    | x :: y :: xs -> helper (y :: xs) ((y - x, y) :: acc)
+(* Computes the gains for each 4-window existing in a single initial secret *)
+let gains init_num =
+  let map = Array.make 130321 0 in
+  let n1 = init_num mod 10 in
+  let num2 = next_secret init_num in
+  let n2 = num2 mod 10 in
+  let d1 = n2 - n1 in
+  let num3 = next_secret num2 in
+  let n3 = num3 mod 10 in
+  let d2 = n3 - n2 in
+  let num4 = next_secret num3 in
+  let n4 = num4 mod 10 in
+  let d3 = n4 - n3 in
+  let num5 = next_secret num4 in
+  let n5 = num5 mod 10 in
+  let d4 = n5 - n4 in
+  (* Pack the 4-window into a base 19 number *)
+  let key = ((d1 + 9) * 6859) + ((d2 + 9) * 361) + ((d3 + 9) * 19) + (d4 + 9) in
+  map.(key) <- n5;
+  let rec loop num n key times =
+    if times = 0 then map
+    else
+      let num' = next_secret num in
+      let n' = num' mod 10 in
+      let key' = ((key * 19) + (n' - n + 9)) mod 130321 in
+      if map.(key') = 0 then map.(key') <- n';
+      loop num' n' key' (times - 1)
   in
-  List.rev (helper lst [])
+  loop num5 n5 key 1996
 
-let rec windows4 lst =
-  match lst with
-  | [] | [ _ ] | [ _; _ ] | [ _; _; _ ] -> []
-  | x :: y :: z :: w :: xs -> (x, y, z, w) :: windows4 (y :: z :: w :: xs)
+let sum_arrays a b = Array.init (Array.length a) (fun i -> a.(i) + b.(i))
 
 let solve1 data =
   let nums = List.map int_of_string data in
@@ -30,28 +45,10 @@ let solve1 data =
 
 let solve2 data =
   let nums = List.map int_of_string data in
-  let nums' = List.map (rep_history next_secret 2000) nums in
-  let prices = List.map (List.map (fun x -> x mod 10)) nums' in
-  let diffs = List.map running_diff prices in
-  let total_gain =
-    Hashtbl.create (List.length diffs * List.length (List.hd diffs))
+  let gains_sum =
+    List.fold_left
+      (fun acc num -> sum_arrays acc (gains num))
+      (Array.make 130321 0) nums
   in
-  List.iter
-    (fun diff_seq ->
-      let seq_gain = Hashtbl.create (List.length diff_seq) in
-      List.iter
-        (fun ((d1, _), (d2, _), (d3, _), (d4, p4)) ->
-          let key = (d1, d2, d3, d4) in
-          if not (Hashtbl.mem seq_gain key) then Hashtbl.add seq_gain key p4)
-        (windows4 diff_seq);
-      Hashtbl.iter
-        (fun key gain ->
-          let sum =
-            Option.fold ~none:gain ~some:(( + ) gain)
-              (Hashtbl.find_opt total_gain key)
-          in
-          Hashtbl.replace total_gain key sum)
-        seq_gain)
-    diffs;
-  let max_gain = Hashtbl.fold (fun _ gain acc -> max acc gain) total_gain 0 in
+  let max_gain = Array.fold_left max 0 gains_sum in
   Printf.printf "%d\n" max_gain

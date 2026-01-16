@@ -88,16 +88,13 @@ let dirpad =
 
 (* Only handles one direction *)
 let move_seq dx dy =
-  let rec aux acc x y =
-    if x = 0 && y = 0 then List.rev acc
-    else if dx <> 0 then
-      let step = if dx > 0 then '>' else '<' in
-      aux (step :: acc) (x - if dx > 0 then 1 else -1) y
-    else
-      let step = if dy > 0 then '^' else 'v' in
-      aux (step :: acc) x (y - if dy > 0 then 1 else -1)
-  in
-  aux [] dx dy
+  match (compare dx 0, compare dy 0) with
+  | 0, 0 -> []
+  | 0, 1 -> List.init dy (fun _ -> '^')
+  | 0, -1 -> List.init (-dy) (fun _ -> 'v')
+  | 1, 0 -> List.init dx (fun _ -> '>')
+  | -1, 0 -> List.init (-dx) (fun _ -> '<')
+  | _ -> failwith "Invalid move"
 
 (* If currently at from, how should it press the button at to (including
    trailing A) *)
@@ -108,9 +105,12 @@ let optimal_path (from_x, from_y) (to_x, to_y) =
     let interm1, interm2 = ((from_x + dx, from_y), (from_x, from_y + dy)) in
     if interm1 = (-2, 0) then move_seq 0 dy @ move_seq dx 0 @ [ 'A' ]
     else if interm2 = (-2, 0) then move_seq dx 0 @ move_seq 0 dy @ [ 'A' ]
-    else if dx < 0 then move_seq dx 0 @ move_seq 0 dy @ [ 'A' ]
-    (* LD, LU *) else move_seq 0 dy @ move_seq dx 0 @ [ 'A' ]
-(* DR, UR *)
+    else if dx < 0 then
+      (* LD, LU *)
+      move_seq dx 0 @ move_seq 0 dy @ [ 'A' ]
+    else
+      (* DR, UR *)
+      move_seq 0 dy @ move_seq dx 0 @ [ 'A' ]
 
 (* If currently at from on layer depth, how many clicks by *you* to reach
    to (including trailing A) *)
@@ -123,7 +123,7 @@ let rec optimal_path_cost from_pos to_pos depth memo =
       if depth = 1 then List.length path
       else
         optimal_total_path_cost
-          (List.map (fun d -> Hashtbl.find dirpad d) ('A' :: path))
+          (List.map (Hashtbl.find dirpad) ('A' :: path))
           (depth - 1) memo
     in
     Hashtbl.add memo (from_pos, to_pos, depth) total_cost;
@@ -138,7 +138,7 @@ and optimal_total_path_cost poses depth memo =
   in
   aux 0 poses
 
-let solve1 data =
+let solve depth data =
   let memo = Hashtbl.create 100 in
   let total =
     List.fold_left
@@ -147,7 +147,7 @@ let solve1 data =
         let positions =
           List.map (fun c -> Hashtbl.find numpad c) ('A' :: chars)
         in
-        let cost = optimal_total_path_cost positions 3 memo in
+        let cost = optimal_total_path_cost positions depth memo in
         let numeric =
           int_of_string (String.sub line 0 (String.length line - 1))
         in
@@ -156,20 +156,5 @@ let solve1 data =
   in
   Printf.printf "%d\n" total
 
-let solve2 data =
-  let memo = Hashtbl.create 100 in
-  let total =
-    List.fold_left
-      (fun acc line ->
-        let chars = List.of_seq (String.to_seq line) in
-        let positions =
-          List.map (fun c -> Hashtbl.find numpad c) ('A' :: chars)
-        in
-        let cost = optimal_total_path_cost positions 26 memo in
-        let numeric =
-          int_of_string (String.sub line 0 (String.length line - 1))
-        in
-        acc + (cost * numeric))
-      0 data
-  in
-  Printf.printf "%d\n" total
+let solve1 = solve 3
+let solve2 = solve 26

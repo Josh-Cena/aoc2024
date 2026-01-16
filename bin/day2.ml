@@ -7,16 +7,16 @@ let get_diff_type d =
 
 let is_inc d = match d with Inc _ -> true | _ -> false
 let is_dec d = match d with Dec _ -> true | _ -> false
+let is_invalid d = match d with Invalid _ -> true | _ -> false
+
+let rec differences lst =
+  match lst with
+  | a :: b :: rest -> get_diff_type (b - a) :: differences (b :: rest)
+  | _ -> []
+
+let parse_line line = List.map int_of_string (String.split_on_char ' ' line)
 
 let solve1 data =
-  let parse_line line =
-    List.map int_of_string (String.split_on_char ' ' line)
-  in
-  let rec differences lst =
-    match lst with
-    | a :: b :: rest -> get_diff_type (b - a) :: differences (b :: rest)
-    | _ -> []
-  in
   let is_safe lst =
     let diffs = differences lst in
     List.for_all is_inc diffs || List.for_all is_dec diffs
@@ -24,25 +24,17 @@ let solve1 data =
   let safe_lines = List.filter is_safe (List.map parse_line data) in
   Printf.printf "%d\n" (List.length safe_lines)
 
+let diff_groups diffs =
+  let rec aux diffs (inc, dec, invalid) =
+    match diffs with
+    | (i, Inc d) :: rest -> aux rest ((i, d) :: inc, dec, invalid)
+    | (i, Dec d) :: rest -> aux rest (inc, (i, d) :: dec, invalid)
+    | (i, Invalid d) :: rest -> aux rest (inc, dec, (i, d) :: invalid)
+    | [] -> (inc, dec, invalid)
+  in
+  aux (List.mapi (fun i x -> (i, x)) diffs) ([], [], [])
+
 let solve2 data =
-  let parse_line line =
-    List.map int_of_string (String.split_on_char ' ' line)
-  in
-  let rec differences lst =
-    match lst with
-    | a :: b :: rest -> get_diff_type (b - a) :: differences (b :: rest)
-    | _ -> []
-  in
-  let diff_groups diffs =
-    let rec aux diffs (inc, dec, invalid) =
-      match diffs with
-      | (i, Inc d) :: rest -> aux rest ((i, d) :: inc, dec, invalid)
-      | (i, Dec d) :: rest -> aux rest (inc, (i, d) :: dec, invalid)
-      | (i, Invalid d) :: rest -> aux rest (inc, dec, (i, d) :: invalid)
-      | [] -> (inc, dec, invalid)
-    in
-    aux (List.mapi (fun i x -> (i, x)) diffs) ([], [], [])
-  in
   let is_safe lst =
     let diffs = differences lst in
     let inc, dec, invalid = diff_groups diffs in

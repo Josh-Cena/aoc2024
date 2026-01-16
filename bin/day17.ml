@@ -84,7 +84,7 @@ type bit_info =
   | Symbol of bool * int
   | Bit of int (* 1 or 0 *)
 
-let shift_by v a0 a1 a2 =
+let shift_by v (a0, a1, a2) =
   if v = 0 then [ Bit a2; Bit a1; Bit a0 ]
   else if v = 1 then [ Symbol (true, 0); Bit a2; Bit a1 ]
   else if v = 2 then [ Symbol (true, 1); Symbol (true, 0); Bit a2 ]
@@ -122,24 +122,21 @@ let split_bits num =
   (a0, a1, a2)
 
 (* The result grows from lowest bit to highest bit *)
-let rec search_sol result info prog =
+let rec search_a tentative_a info prog =
   match prog with
-  | [] -> Some result
+  | [] -> Some tentative_a
   | out :: rest ->
       let out0, out1, out2 = split_bits out in
-      let res =
-        List.mapi (fun i l -> (i, l)) info
-        |> List.filter (fun (_, inf) ->
-            List.for_all2 (is_bit_compatible result) [ out2; out1; out0 ] inf)
-      in
-      List.find_map
-        (fun (i, _) ->
-          let res0, res1, res2 = split_bits i in
-          let new_result =
-            Array.append (Array.of_list [ res0; res1; res2 ]) result
+      info
+      |> List.filter (fun (_, inf) ->
+          List.for_all2 (is_bit_compatible tentative_a) [ out2; out1; out0 ] inf)
+      |> List.map fst
+      |> List.find_map (fun ao ->
+          let ao0, ao1, ao2 = split_bits ao in
+          let tentative_a' =
+            Array.append (Array.of_list [ ao0; ao1; ao2 ]) tentative_a
           in
-          search_sol new_result info rest)
-        res
+          search_a tentative_a' info rest)
 
 let solve2 data =
   let _, _, _, prog =
@@ -156,20 +153,16 @@ let solve2 data =
   assert (
     prog = Array.of_list [ 2; 4; 1; x; 7; 5; 1; y; 4; 4; 5; 5; 0; 3; 3; 0 ]);
   let info =
-    List.map
-      (fun i ->
+    [ 0; 1; 2; 3; 4; 5; 6; 7 ]
+    |> List.map (fun i ->
         let a0, a1, a2 = split_bits i in
-        shift_by (i lxor x) a0 a1 a2
+        shift_by (i lxor x) (a0, a1, a2)
         |> xor_bits [ Bit a2; Bit a1; Bit a0 ]
         |> xor_bits [ Bit x2; Bit x1; Bit x0 ]
         |> xor_bits [ Bit y2; Bit y1; Bit y0 ])
-      [ 0; 1; 2; 3; 4; 5; 6; 7 ]
+    |> List.mapi (fun i l -> (i, l))
   in
-  match search_sol (Array.make 0 0) info (List.rev (Array.to_list prog)) with
-  | None -> Printf.printf "No solution found\n"
-  | Some res ->
-      Printf.printf "%d\n"
-        (int_of_string
-           (Printf.sprintf "0b%s"
-              (res |> Array.to_list |> List.rev |> List.map string_of_int
-             |> String.concat "")))
+  search_a (Array.make 0 0) info (List.rev (Array.to_list prog))
+  |> Option.get |> Array.to_list |> List.rev
+  |> List.fold_left (fun acc bit -> (acc lsl 1) + bit) 0
+  |> Printf.printf "%d\n"

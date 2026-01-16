@@ -15,22 +15,27 @@ let solve1 data =
   Queue.push (0, 0) queue;
   let dist = Array.make_matrix w h (-1) in
   dist.(0).(0) <- 0;
-  while not (Queue.is_empty queue) do
-    let x, y = Queue.pop queue in
-    List.iter
-      (fun (dx, dy) ->
-        let nx, ny = (x + dx, y + dy) in
-        if
-          nx >= 0 && nx < w && ny >= 0 && ny < h
-          && (not grid.(ny).(nx))
-          && dist.(ny).(nx) = -1
-        then begin
-          dist.(ny).(nx) <- dist.(y).(x) + 1;
-          Queue.push (nx, ny) queue
-        end)
-      [ (0, 1); (1, 0); (0, -1); (-1, 0) ]
-  done;
-  Printf.printf "%d\n" dist.(h - 1).(w - 1)
+  let rec loop () =
+    if Queue.is_empty queue then failwith "No path found"
+    else
+      let x, y = Queue.pop queue in
+      if x = w - 1 && y = h - 1 then dist.(y).(x)
+      else (
+        List.iter
+          (fun (dx, dy) ->
+            let nx, ny = (x + dx, y + dy) in
+            if
+              nx >= 0 && nx < w && ny >= 0 && ny < h
+              && (not grid.(ny).(nx))
+              && dist.(ny).(nx) = -1
+            then begin
+              dist.(ny).(nx) <- dist.(y).(x) + 1;
+              Queue.push (nx, ny) queue
+            end)
+          [ (0, 1); (1, 0); (0, -1); (-1, 0) ];
+        loop ())
+  in
+  Printf.printf "%d\n" (loop ())
 
 (* The observation is this: if a wall completely separates the top left from
    the bottom right, then it must touch one of the top/right walls, and one
@@ -48,27 +53,14 @@ let solve2 data =
         (x, y))
       data
   in
-  let cur_grid = Array.make_matrix w h false in
-  for x = 1 to w - 2 do
-    cur_grid.(0).(x) <- true;
-    cur_grid.(h - 1).(x) <- true
-  done;
-  cur_grid.(0).(w - 1) <- true;
-  for y = 1 to h - 2 do
-    cur_grid.(y).(0) <- true;
-    cur_grid.(y).(w - 1) <- true
-  done;
-  cur_grid.(h - 1).(0) <- true;
   let cells = Array.make_matrix w h None in
   let try_union x y nx ny =
-    if 0 <= nx && nx < w && 0 <= ny && ny < h && cur_grid.(ny).(nx) then
-      ignore
-        (UnionFind.union
-           (Option.get cells.(y).(x))
-           (Option.get cells.(ny).(nx)))
+    if 0 <= nx && nx < w && 0 <= ny && ny < h then
+      match (cells.(y).(x), cells.(ny).(nx)) with
+      | Some cell1, Some cell2 -> ignore (UnionFind.union cell1 cell2)
+      | _ -> ()
   in
 
-  List.iter (fun (x, y) -> cells.(y).(x) <- Some (UnionFind.make (x, y))) points;
   for x = 1 to w - 2 do
     cells.(0).(x) <- Some (UnionFind.make (x, 0));
     cells.(h - 1).(x) <- Some (UnionFind.make (x, h - 1))
@@ -89,9 +81,9 @@ let solve2 data =
   done;
 
   let first_blocking =
-    List.find_index
+    List.find
       (fun (x, y) ->
-        cur_grid.(y).(x) <- true;
+        cells.(y).(x) <- Some (UnionFind.make (x, y));
         for dx = -1 to 1 do
           for dy = -1 to 1 do
             if dx <> 0 || dy <> 0 then try_union x y (x + dx) (y + dy)
@@ -100,8 +92,4 @@ let solve2 data =
         UnionFind.eq (Option.get cells.(1).(0)) (Option.get cells.(0).(1)))
       points
   in
-  match first_blocking with
-  | None -> Printf.printf "No blocking wall found\n"
-  | Some i ->
-      let p = List.nth points i in
-      Printf.printf "%d,%d\n" (fst p - 1) (snd p - 1)
+  Printf.printf "%d,%d\n" (fst first_blocking - 1) (snd first_blocking - 1)
