@@ -1,7 +1,8 @@
 # Advent of Code 2022
 
-Language: ![OCaml](https://img.shields.io/badge/OCaml-%23E98407.svg?style=for-the-badge&logo=ocaml&logoColor=white) (5.2.1)
-Package Manager: [opam](https://opam.ocaml.org/)
+- Language: ![OCaml](https://img.shields.io/badge/OCaml-%23E98407.svg?style=for-the-badge&logo=ocaml&logoColor=white) (5.2.1)
+- Package Manager: [opam](https://opam.ocaml.org/)
+- [Writeup](https://joshcena.com/notes/aoc/)
 
 This repo uses my standard AoC setup. Inputs are stored as `inputs/day{n}/{name}.txt`. By default `name` is `real` (the real question). To run a specific day's solution, use the following command:
 
